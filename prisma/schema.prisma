@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         String     @default("USER")
+  memberLevel  Int        @default(0)
+  totalSpent   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  cartItems    CartItem[]
+  orders       Order[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String
+  description String
+  price       Int
+  imageUrl    String
+  stock       Int
+  categoryId  String
+  category    Category   @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  cartItems   CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNo        String      @unique
+  userId         String
+  originalAmount Int
+  discount       Int         @default(100)
+  totalAmount    Int
+  status         String      @default("PENDING_PAYMENT")
+  address        String
+  createdAt      DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id])
+  items          OrderItem[]
+}
+
+model OrderItem {
+  id          String @id @default(cuid())
+  orderId     String
+  productId   String
+  productName String
+  price       Int
+  quantity    Int
+  order       Order  @relation(fields: [orderId], references: [id])
+}

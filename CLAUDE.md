@@ -59,11 +59,12 @@ app/
     products/  categories/  orders/
 lib/
   prisma.ts                 PrismaClient 单例
-  auth.ts                   JWT 签发/校验、getSession()
-  password.ts               bcrypt 哈希/比对
-  member.ts                 心悦等级配置 + 折扣计算  ← 改会员规则只改这里
+  queries.ts                共享查询函数（Server Component 与 API 路由复用，避免逻辑重复）
+  auth.ts                   bcrypt 哈希/比对 + JWT 签发校验 + session Cookie
+  url.ts                    列表页 URL 构造（搜索/分类/分页参数编码）
+  member.ts                 心悦等级配置 + 折扣计算  ← 改会员规则只改这里（待实现）
   money.ts                  分 ↔ 元 换算
-proxy.ts                    路由保护（注意：不是 middleware.ts）
+proxy.ts                    路由保护（注意：不是 middleware.ts）（待实现）
 ```
 
 ## 核心约定
@@ -92,9 +93,21 @@ proxy.ts                    路由保护（注意：不是 middleware.ts）
 ### 鉴权
 
 自定义 JWT，不使用 Auth.js：
-- 登录成功后签 JWT 存 **httpOnly cookie**
+- 登录成功后签 JWT 存 **httpOnly cookie**（`sameSite: lax`；生产环境自动加 `secure`）
 - `lib/auth.ts` 的 `getSession()` 在服务端读取并解密，返回 `userId` + `role`
+- `getCurrentUser()` 读数据库返回完整用户信息（不含 `passwordHash`）。**权限判定用它，不要用 `getSession().role`** —— Cookie 里的 role 是签发时的快照，用户改角色后会过期
 - `proxy.ts` 负责页面级跳转保护，**Server Action 内必须再校验一次权限**（防越权）
+
+认证相关接口（**这是「写入走 Server Action」约定的唯一例外**，因为登录注册需要给未登录用户调用并对接 httpOnly Cookie）：
+
+| 接口 | 说明 |
+|---|---|
+| `POST /api/auth/register` | 注册，成功即写入会话 |
+| `POST /api/auth/login` | 登录，失败统一返回「邮箱或密码错误」不区分原因 |
+| `GET /api/auth/me` | 当前用户，未登录 401 |
+| `POST /api/auth/logout` | 清除会话 Cookie |
+
+安全约定：密码一律 bcrypt 哈希（cost 10）；登录时邮箱不存在也要执行一次等价 bcrypt 比对，抹平响应时间差异，防用户枚举。
 
 ## 数据模型
 
