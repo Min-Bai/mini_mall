@@ -4,13 +4,23 @@ import { prisma } from "./prisma";
 export const PRODUCTS_PER_PAGE = 9;
 
 /**
- * 把任意来源的 page 入参归一化为 ≥1 的整数。
- * NaN / 小数 / 负数 / 0 / null / undefined 一律回落到 1 —— 不能只靠 `?? 1`，
- * 它挡不住 NaN，而 NaN 传进 Prisma 的 skip 会抛 PrismaClientValidationError。
+ * 页码上限。skip = (page - 1) * PRODUCTS_PER_PAGE 必须落在安全整数范围内，
+ * 否则会算成 Infinity 传给 Prisma，抛 PrismaClientValidationError（接口 500）。
+ */
+const MAX_PAGE = 1_000_000;
+
+/**
+ * 把任意来源的 page 入参归一化为 [1, MAX_PAGE] 区间内的整数。
+ *
+ * - NaN / Infinity / 小数 / 负数 / 0 / null / undefined → 1
+ *   （不能只靠 `?? 1`，它挡不住 NaN）
+ * - 超大的有限值（如 1e308、1e20）→ MAX_PAGE
+ *   （只判 Number.isFinite 是不够的：1e308 是有限数，但 (1e308 - 1) * 9 溢出成 Infinity）
  */
 export function normalizePage(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(Math.floor(n), MAX_PAGE);
 }
 
 /** 商品列表：支持 search 模糊搜索、category（按 slug）筛选、page 分页 */
