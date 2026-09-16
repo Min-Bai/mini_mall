@@ -24,6 +24,14 @@
 .DS_Store
 *.pem
 
+# Claude Code / AI 的配置与指令文件：只放本地，不入库
+#   .claude/  = 本机配置（权限允许列表 / 钩子 / 上下文窗口）+ 技能包
+#   CLAUDE.md = 项目规范
+#   AGENTS.md = 由 next dev 自动生成，性质同下面的 next-env.d.ts
+.claude/
+CLAUDE.md
+AGENTS.md
+
 # debug
 npm-debug.log*
 yarn-debug.log*
