@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# Claude Code 的本机配置（权限允许列表 / 钩子 / 上下文窗口等，因人而异，不入库）
+# 注意：.claude/skills/ 是团队共享的技能包，仍然入库，不要一起忽略
+.claude/settings.local.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*

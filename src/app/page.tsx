@@ -5,24 +5,18 @@ import {
   getCategoriesWithCount,
   normalizePage,
 } from "@/lib/queries";
-import { buildListUrl } from "@/lib/url";
+import { buildListUrl, firstParam, type SearchParamsPromise } from "@/lib/url";
 import ProductCard from "@/components/ProductCard";
-
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-
-function str(v: string | string[] | undefined): string {
-  return typeof v === "string" ? v : "";
-}
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: SearchParamsPromise;
 }) {
   const sp = await searchParams;
-  const search = str(sp.search);
-  const category = str(sp.category);
-  const page = normalizePage(str(sp.page));
+  const search = firstParam(sp.search);
+  const category = firstParam(sp.category);
+  const page = normalizePage(firstParam(sp.page));
 
   const [categories, { items, total, totalPages }] = await Promise.all([
     getCategoriesWithCount(),
