@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { ADMIN_ROLE } from "@/lib/admin";
 import LogoutButton from "@/components/LogoutButton";
 import "./globals.css";
 
@@ -23,8 +24,31 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
 
             <nav className="flex items-center gap-4 text-sm">
+              <Link
+                href="/cart"
+                className="text-gray-600 transition-colors hover:text-gray-900"
+              >
+                购物车
+              </Link>
+
               {user ? (
                 <>
+                  <Link
+                    href="/orders"
+                    className="text-gray-600 transition-colors hover:text-gray-900"
+                  >
+                    我的订单
+                  </Link>
+                  {/* 后台入口只给管理员看。真正的权限判定在 /admin/layout.tsx 与各接口里，
+                      这里隐藏链接纯粹是为了不让普通用户点进一个必然被拒的页面 */}
+                  {user.role === ADMIN_ROLE && (
+                    <Link
+                      href="/admin"
+                      className="text-gray-600 transition-colors hover:text-gray-900"
+                    >
+                      后台管理
+                    </Link>
+                  )}
                   <span className="text-gray-700">{user.name}</span>
                   <LogoutButton />
                 </>

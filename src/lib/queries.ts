@@ -1,7 +1,20 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
+import { matchingStorefrontProductIds } from "./search";
 
 export const PRODUCTS_PER_PAGE = 9;
+
+/**
+ * 分页取数结果的标准形状。列表页只认这几个字段，不关心背后是哪个模型 ——
+ * 页面因此可以把 `{items, total, page, totalPages}` 直接喂给分页组件。
+ */
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
 
 /**
  * 页码上限。skip = (page - 1) * PRODUCTS_PER_PAGE 必须落在安全整数范围内，
@@ -35,10 +48,9 @@ export async function getProducts(params: {
 
   const where: Prisma.ProductWhereInput = {};
   if (search) {
-    where.OR = [
-      { name: { contains: search } },
-      { description: { contains: search } },
-    ];
+    // 关键词走 lib/search.ts 的带 ESCAPE 的 LIKE，而不是 where.OR + contains ——
+    // contains 生成 `LIKE ?` 不带 ESCAPE，`%` / `_` 会当通配符（搜 `%` 命中全表）
+    where.id = { in: await matchingStorefrontProductIds(search) };
   }
   if (category) {
     where.category = { slug: category };
@@ -48,7 +60,9 @@ export async function getProducts(params: {
     prisma.product.findMany({
       where,
       include: { category: true },
-      orderBy: { createdAt: "desc" },
+      // createdAt 只精确到毫秒，同一毫秒内的两行顺序由 SQLite 自行决定且不保证稳定 ——
+      // 翻页时同一个查询重跑可能给出不同的顺序，导致漏行或重复行。补 id 作 tie-break。
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * PRODUCTS_PER_PAGE,
       take: PRODUCTS_PER_PAGE,
     }),
